@@ -6,9 +6,12 @@ Created on 14.10.2017
 def nichtFiltern(x):
     return x != "" and ("[ERR" in x or "[WRN" in x or x[0] == " ")
 
-log = "\n".join(list(filter(lambda x: nichtFiltern(x), open("C:\Steam\steamapps\common\Kerbal Space Program\KSP.log", "r").read().split("\n"))))
+logPath = "C:\Steam\steamapps\common\Kerbal Space Program\KSP.log"
+outPath = "C:/Users/benef/Desktop/errors.txt"
 
-file = open("C:/Users/benef/Desktop/errors.txt", "w")
+log = "\n".join(list(filter(lambda x: nichtFiltern(x), open(logPath, "r").read().split("\n"))))
+
+file = open(outPath, "w")
 file.write(log)
 file.close()
 
