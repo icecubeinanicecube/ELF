@@ -50,13 +50,13 @@ for i in range(1, len(argv)):   #argv[0] just returns the name of the script
 
 #filter the input
 inp = open(logPath, "r")
-p = re.compile("(^\[((.)*\n*(?!^\[))*|\*{10,})", re.MULTILINE)
+p = re.compile("(^\[((.)*\n*(?!^\[))*$)", re.MULTILINE)
 entries = re.split(p, inp.read())
 inp.close()
 
 result = list(filter(lambda x: nichtFiltern(x, keywords, wrn, err, log), entries))
 
-out = "".join(result)
+out = "\n".join(result).replace("\n\n", "\n")
 
 #write the output
 file = open(outPath, "w")
