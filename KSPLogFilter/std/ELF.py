@@ -2,6 +2,8 @@
 Created on 14.10.2017
 
 @author: benef
+
+git is shit
 '''
 from sys import argv
 from functools import reduce
