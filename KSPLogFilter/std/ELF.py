@@ -1,75 +1,64 @@
-'''
+"""
 Created on 14.10.2017
 
 @author: benef
 
-git is shit
-'''
-from sys import argv
+A Script to filter out all entries in the logfile containing the selected keywords
+
+"""
+import argparse
 from functools import reduce
 import re
 
 
-def nichtFiltern(x, keywords, wrn, err, log):
-    base = (wrn and "[WRN" in x) or (err and "[ERR" in x) or (log and "[LOG" in x) or ("[EXC" in x)
-    if keywords == []:
+# define utility functions
+def is_searched_for(x, keyword_list, warnings, errors, logs, only_all):
+    base = (warnings and "[WRN" in x) or (errors and "[ERR" in x) or (logs and "[LOG" in x) or ("[EXC" in x)
+    if not keyword_list:
         return base
     else:
-        return base and reduce(lambda a, b: (True or a) if b in x else a, keywords, False)
-        
-    
+        if only_all:
+            return base and reduce(lambda a, b: a if b in x else False, keyword_list, True)
+        return base and reduce(lambda a, b: True if b in x else a, keyword_list, False)
 
+
+def parse_arguments():
+    # evaluate arguments with ArgumentParser
+    argsparser = argparse.ArgumentParser(description=docstring)
+    argsparser.add_argument(["-o", "--out"], default=defaultOutPath, help="specifies the output path", dest="output")
+    argsparser.add_argument(["-i", "--in"], default=defaultLogPath, help="specifies the input path", dest="input")
+    argsparser.add_argument("-log", action="store_true", default=False, help="include log entries", dest="logs")
+    argsparser.add_argument("-noWrn", action="store_false", default=True, help="exclude warnings", dest="warnings")
+    argsparser.add_argument("-noErr", action="store_false", default=True, help="exclude errors", dest="errors")
+    argsparser.add_argument(["-a", "--and"], action="store_true", default=False, help="only show entries with all "
+                                                                                      "keywords in them", dest="errors")
+    argsparser.add_argument(["-k", "--keywords"], nargs=argparse.REMAINDER,
+                            help="all args after this are interpreted as keywords to search for", dest="keywords")
+    return argsparser.parse_args()
+
+
+def read_file(log_path):
+    with open(log_path, "r") as inp:
+        p = re.compile("(^\[((.)*\n*(?!^\[))*$)", re.MULTILINE)
+        return re.split(p, inp.read())
+
+
+def filter_entries(keywords, warnings, errors, logs, entries):
+    return list(filter(lambda x: is_searched_for(x, keywords, warnings, errors, logs), entries))
+
+
+# default variables
 defaultLogPath = "KSP.log"
 defaultOutPath = "errors.txt"
-keywords = []
-about = "Usage: ELF [-o <path>] [-s <path>] [-k <keyword>] [-log] [-noWrn] [-noErr]\n-o: specifies the output path \n-s: specifies the path of the source log\n-k: specifies a keyword to search for, case-sensitive (WARNING: beta-feature))\n-log: include log-entries\n-noWrn: exclude Warnings\n-noErr: exclude Errors"
+docstring = "A Script to filter out all entries in the logfile containing the selected keywords"
 
-logPath = defaultLogPath
-outPath = defaultOutPath
-wrn = True
-err = True
-log = False
+# do the work
+choices = parse_arguments()
+entries = read_file(choices.logPath)
+result = filter_entries(choices.keywords, choices.warnings, choices.errors, choices.logs, entries)
 
-#evaluate arguments, if none keep defaults
-
-if(len(argv) > 1 and argv[1] == "--help"):
-    print(about)
-    exit()
-for i in range(1, len(argv)):   #argv[0] just returns the name of the script
-    if(argv[i] == "-o"):
-        outPath = argv[i+1]
-    elif(argv[i] == "-s"):
-        logPath = argv[i+1]
-    elif(argv[i] == "-k"):
-        keywords.append(argv[i+1])
-    elif(argv[i] == "-log"):
-        log = True
-    elif(argv[i] == "-noWrn"):
-        wrn = False
-    elif(argv[i] == "-noErr"):
-        err = False
-    
-
-#filter the input
-inp = open(logPath, "r")
-p = re.compile("(^\[((.)*\n*(?!^\[))*$)", re.MULTILINE)
-entries = re.split(p, inp.read())
-inp.close()
-
-result = list(filter(lambda x: nichtFiltern(x, keywords, wrn, err, log), entries))
-
+# write the output to file
 out = "\n".join(result).replace("\n\n", "\n")
-
-#write the output
-file = open(outPath, "w")
-file.write(out)
-print("successful: ", len(result),"entries in filtered log")
-file.close()
-
-"""
-#only for debug
-debug = open("debug.txt", "w")
-debug.write("".join(entries))
-debug.close()
-print(len(entries))
-"""
+with open(choices.outPath, "w") as file:
+    file.write(out)
+    print("successful: ", len(result), "entries in filtered log")
